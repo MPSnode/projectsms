@@ -1,3 +1,6 @@
+import os
+import sys
+import hashlib
 import serial
 import serial.tools.list_ports
 import time
@@ -5,6 +8,30 @@ from colorama import init, Fore
 
 # Inisialisasi colorama
 init(autoreset=True)
+
+def load_access_key_hash(file_path):
+    """ Membaca hash kunci akses dari file biner """
+    try:
+        with open(file_path, 'rb') as file:
+            return file.read()
+    except FileNotFoundError:
+        print(Fore.RED + f"File {file_path} tidak ditemukan.")
+        sys.exit(1)
+
+def check_access_key():
+    """ Memeriksa akses key yang dimasukkan pengguna """
+    access_key_file = 'path/to/access_key.bin'  # Ganti dengan path yang sesuai
+    valid_access_key_hash = load_access_key_hash(access_key_file)
+    
+    user_input = input("Masukkan kode akses: ").strip()
+    user_input_hash = hashlib.md5(user_input.encode()).digest()
+    
+    if user_input_hash == valid_access_key_hash:
+        print(Fore.GREEN + "Akses berhasil!")
+        return True
+    else:
+        print(Fore.RED + "Kode akses tidak valid.")
+        sys.exit(1)
 
 def list_serial_ports():
     """ Mencetak daftar port serial yang tersedia """
@@ -141,6 +168,10 @@ class MobilePhone:
             print(Fore.YELLOW + f"Phone at {self.port} closed.")
 
 def main():
+    # Memeriksa akses key
+    if not check_access_key():
+        return
+
     # Tampilkan daftar port serial
     list_serial_ports()
 
@@ -189,9 +220,9 @@ def main():
                     print(Fore.YELLOW + "\n[1] SET MESSAGE")
                     print(Fore.YELLOW + "[2] SET NUMBER")
                     print(Fore.YELLOW + "[3] START")
-                    
+
                     choice = input("Pilih opsi: ").strip()
-                    
+
                     if choice == '1':
                         print(Fore.YELLOW + "Memilih pesan...")
                         # Update pesan jika diperlukan
@@ -201,10 +232,10 @@ def main():
                     elif choice == '3':
                         print(Fore.YELLOW + "CHOOSE THE METHOD YOU WANT TO USE:")
                         print(Fore.YELLOW + "[1] SINGLE MODEM")
-                        print(Fore.YELLOW + "[2] ALL MODEM")
+                        print(Fore.YELLOW + "[2] ALL MODEMS")
 
                         method_choice = input("Pilih metode: ").strip()
-                        
+
                         if method_choice == '1':
                             print(Fore.YELLOW + "SELECT THE MODEM YOU WANT TO USE:")
                             for index, modem in enumerate(modems_initialized):
@@ -225,7 +256,7 @@ def main():
                                 selected_modem.close()
                             else:
                                 print(Fore.RED + "Pilihan modem tidak valid.")
-                        
+
                         elif method_choice == '2':
                             for modem in modems_initialized:
                                 print(Fore.GREEN + f"Processing with MODEM: {modem.port}")
@@ -238,7 +269,7 @@ def main():
                                         if error:
                                             print(error)
                                 modem.close()
-                        
+
                         else:
                             print(Fore.RED + "Metode tidak valid.")
 
@@ -275,9 +306,9 @@ def main():
                     print(Fore.YELLOW + "\n[1] SET MESSAGE")
                     print(Fore.YELLOW + "[2] SET NUMBER")
                     print(Fore.YELLOW + "[3] START")
-                    
+
                     choice = input("Pilih opsi: ").strip()
-                    
+
                     if choice == '1':
                         print(Fore.YELLOW + "Memilih pesan...")
                         # Update pesan jika diperlukan
@@ -290,7 +321,7 @@ def main():
                         print(Fore.YELLOW + "[2] ALL PHONES")
 
                         method_choice = input("Pilih metode: ").strip()
-                        
+
                         if method_choice == '1':
                             print(Fore.YELLOW + "SELECT THE PHONE YOU WANT TO USE:")
                             for index, phone in enumerate(phones_initialized):
@@ -311,7 +342,7 @@ def main():
                                 selected_phone.close()
                             else:
                                 print(Fore.RED + "Pilihan ponsel tidak valid.")
-                        
+
                         elif method_choice == '2':
                             for phone in phones_initialized:
                                 print(Fore.GREEN + f"Processing with PHONE: {phone.port}")
@@ -324,7 +355,7 @@ def main():
                                         if error:
                                             print(error)
                                 phone.close()
-                        
+
                         else:
                             print(Fore.RED + "Metode tidak valid.")
 
