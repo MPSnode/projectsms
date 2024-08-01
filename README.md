@@ -1,10 +1,10 @@
-```markdown
-# Bulk SMS Sender
 
-## Deskripsi
+Bulk SMS Sender
+
+-Deskripsi
 Script ini memungkinkan Anda mengirim SMS massal menggunakan modem GSM atau ponsel yang terhubung ke komputer melalui USB. Script ini mendeteksi perangkat, memeriksa koneksi, dan mengirim SMS ke nomor target.
 
-## Prerequisites
+-Prerequisites
 Sebelum menjalankan script ini, pastikan Anda telah memenuhi persyaratan berikut:
 
 1. **Python 3.12** atau versi terbaru terinstal di komputer Anda.
