@@ -73,6 +73,16 @@ def read_lines(file_path):
         print(Fore.RED + f"File {file_path} tidak ditemukan.")
         return []
 
+def write_lines(file_path, lines):
+    """ Menulis baris ke file """
+    try:
+        with open(file_path, 'w') as file:
+            for line in lines:
+                file.write(line + '\n')
+        print(Fore.GREEN + f"Successfully wrote {len(lines)} lines to {file_path}.")
+    except Exception as e:
+        print(Fore.RED + f"Error writing to {file_path}: {e}")
+
 class GSMModem:
     def __init__(self, port):
         self.port = port
@@ -175,12 +185,15 @@ def main():
     # Tampilkan daftar port serial
     list_serial_ports()
 
-    devices = read_lines('data/modems.txt')
+    modems = read_lines('data/modems.txt')
+    phones = read_lines('data/phones.txt')
 
-    if not devices:
-        print(Fore.RED + "Daftar perangkat kosong atau tidak ditemukan.")
-        return
-
+    if not modems:
+        print(Fore.RED + "Daftar modem kosong atau tidak ditemukan.")
+    
+    if not phones:
+        print(Fore.RED + "Daftar ponsel kosong atau tidak ditemukan.")
+    
     while True:
         print(Fore.YELLOW + "\n[1] Gunakan Modem GSM")
         print(Fore.YELLOW + "[2] Gunakan Ponsel")
@@ -194,7 +207,7 @@ def main():
             if device_choice == '1':
                 # Deteksi modem
                 modems_initialized = []
-                for device_port in devices:
+                for device_port in modems:
                     if detect_device(device_port):
                         modem = GSMModem(device_port)
                         if modem.initialize():
@@ -237,58 +250,69 @@ def main():
                         method_choice = input("Pilih metode: ").strip()
 
                         if method_choice == '1':
-                            print(Fore.YELLOW + "SELECT THE MODEM YOU WANT TO USE:")
-                            for index, modem in enumerate(modems_initialized):
-                                print(Fore.YELLOW + f"[{index+1}] MODEM {index+1}")
+                            phone_numbers = read_lines('data/nomor.txt')
+                            message = 'Insert your message here'  # Ganti dengan pesan yang diinginkan
 
-                            modem_choice = int(input("Pilih modem: ").strip()) - 1
-                            if 0 <= modem_choice < len(modems_initialized):
-                                selected_modem = modems_initialized[modem_choice]
-                                print(Fore.GREEN + f"Selected MODEM: {selected_modem.port}")
+                            print(Fore.YELLOW + "Pilih modem yang akan digunakan:")
+                            for i, modem in enumerate(modems_initialized):
+                                print(Fore.YELLOW + f"[{i + 1}] {modem.port}")
+
+                            modem_index = int(input("Masukkan nomor modem: ").strip()) - 1
+
+                            if 0 <= modem_index < len(modems_initialized):
+                                selected_modem = modems_initialized[modem_index]
                                 for phone_number in phone_numbers:
-                                    for message in messages:
-                                        status, error = selected_modem.send_sms(phone_number, message)
-                                        print(Fore.CYAN + f"MODEM: {selected_modem.port}")
-                                        print(Fore.CYAN + f"NUMBER: {phone_number}")
-                                        print(status)
-                                        if error:
-                                            print(error)
+                                    status, error_message = selected_modem.send_sms(phone_number, message)
+                                    if status:
+                                        print(Fore.GREEN + f"Nomor: {phone_number} - {status}")
+                                    if error_message:
+                                        print(Fore.RED + f"Nomor: {phone_number} - {error_message}")
+
                                 selected_modem.close()
+                                break
                             else:
-                                print(Fore.RED + "Pilihan modem tidak valid.")
-
+                                print(Fore.RED + "Nomor modem tidak valid.")
                         elif method_choice == '2':
+                            phone_numbers = read_lines('data/nomor.txt')
+                            message = 'Insert your message here'  # Ganti dengan pesan yang diinginkan
+
+                            for phone_number in phone_numbers:
+                                for modem in modems_initialized:
+                                    status, error_message = modem.send_sms(phone_number, message)
+                                    if status:
+                                        print(Fore.GREEN + f"Nomor: {phone_number} - {status}")
+                                    if error_message:
+                                        print(Fore.RED + f"Nomor: {phone_number} - {error_message}")
+
                             for modem in modems_initialized:
-                                print(Fore.GREEN + f"Processing with MODEM: {modem.port}")
-                                for phone_number in phone_numbers:
-                                    for message in messages:
-                                        status, error = modem.send_sms(phone_number, message)
-                                        print(Fore.CYAN + f"MODEM: {modem.port}")
-                                        print(Fore.CYAN + f"NUMBER: {phone_number}")
-                                        print(status)
-                                        if error:
-                                            print(error)
                                 modem.close()
-
+                            break
                         else:
-                            print(Fore.RED + "Metode tidak valid.")
-
-                        break
+                            print(Fore.RED + "Pilihan metode tidak valid.")
                     else:
                         print(Fore.RED + "Pilihan tidak valid.")
-
             elif device_choice == '2':
                 # Deteksi ponsel
+                detected_phones = []
+                print(Fore.YELLOW + "Mendeteksi ponsel yang terhubung...")
+                ports = serial.tools.list_ports.comports()
+                for port in ports:
+                    if detect_device(port.device):
+                        detected_phones.append(port.device)
+
+                if detected_phones:
+                    write_lines('data/phones.txt', detected_phones)
+                    print(Fore.GREEN + "Informasi port ponsel berhasil disimpan.")
+                else:
+                    print(Fore.RED + "Tidak ada ponsel yang terdeteksi.")
+
                 phones_initialized = []
-                for device_port in devices:
-                    if detect_device(device_port):
-                        phone = MobilePhone(device_port)
-                        if phone.initialize():
-                            phones_initialized.append(phone)
-                        else:
-                            print(Fore.RED + f"LOGIN FAILURE!! {device_port}")
+                for device_port in detected_phones:
+                    phone = MobilePhone(device_port)
+                    if phone.initialize():
+                        phones_initialized.append(phone)
                     else:
-                        print(Fore.RED + f"PLEASE CONNECT USB FIRST: {device_port}")
+                        print(Fore.RED + f"LOGIN FAILURE!! {device_port}")
 
                 if not phones_initialized:
                     print(Fore.RED + "Tidak ada ponsel yang berhasil diinisialisasi.")
@@ -323,48 +347,50 @@ def main():
                         method_choice = input("Pilih metode: ").strip()
 
                         if method_choice == '1':
-                            print(Fore.YELLOW + "SELECT THE PHONE YOU WANT TO USE:")
-                            for index, phone in enumerate(phones_initialized):
-                                print(Fore.YELLOW + f"[{index+1}] PHONE {index+1}")
+                            phone_numbers = read_lines('data/nomor.txt')
+                            message = 'Insert your message here'  # Ganti dengan pesan yang diinginkan
 
-                            phone_choice = int(input("Pilih ponsel: ").strip()) - 1
-                            if 0 <= phone_choice < len(phones_initialized):
-                                selected_phone = phones_initialized[phone_choice]
-                                print(Fore.GREEN + f"Selected PHONE: {selected_phone.port}")
+                            print(Fore.YELLOW + "Pilih ponsel yang akan digunakan:")
+                            for i, phone in enumerate(phones_initialized):
+                                print(Fore.YELLOW + f"[{i + 1}] {phone.port}")
+
+                            phone_index = int(input("Masukkan nomor ponsel: ").strip()) - 1
+
+                            if 0 <= phone_index < len(phones_initialized):
+                                selected_phone = phones_initialized[phone_index]
                                 for phone_number in phone_numbers:
-                                    for message in messages:
-                                        status, error = selected_phone.send_sms(phone_number, message)
-                                        print(Fore.CYAN + f"PHONE: {selected_phone.port}")
-                                        print(Fore.CYAN + f"NUMBER: {phone_number}")
-                                        print(status)
-                                        if error:
-                                            print(error)
+                                    status, error_message = selected_phone.send_sms(phone_number, message)
+                                    if status:
+                                        print(Fore.GREEN + f"Nomor: {phone_number} - {status}")
+                                    if error_message:
+                                        print(Fore.RED + f"Nomor: {phone_number} - {error_message}")
+
                                 selected_phone.close()
+                                break
                             else:
-                                print(Fore.RED + "Pilihan ponsel tidak valid.")
-
+                                print(Fore.RED + "Nomor ponsel tidak valid.")
                         elif method_choice == '2':
+                            phone_numbers = read_lines('data/nomor.txt')
+                            message = 'Insert your message here'  # Ganti dengan pesan yang diinginkan
+
+                            for phone_number in phone_numbers:
+                                for phone in phones_initialized:
+                                    status, error_message = phone.send_sms(phone_number, message)
+                                    if status:
+                                        print(Fore.GREEN + f"Nomor: {phone_number} - {status}")
+                                    if error_message:
+                                        print(Fore.RED + f"Nomor: {phone_number} - {error_message}")
+
                             for phone in phones_initialized:
-                                print(Fore.GREEN + f"Processing with PHONE: {phone.port}")
-                                for phone_number in phone_numbers:
-                                    for message in messages:
-                                        status, error = phone.send_sms(phone_number, message)
-                                        print(Fore.CYAN + f"PHONE: {phone.port}")
-                                        print(Fore.CYAN + f"NUMBER: {phone_number}")
-                                        print(status)
-                                        if error:
-                                            print(error)
                                 phone.close()
-
+                            break
                         else:
-                            print(Fore.RED + "Metode tidak valid.")
-
-                        break
+                            print(Fore.RED + "Pilihan metode tidak valid.")
                     else:
                         print(Fore.RED + "Pilihan tidak valid.")
-
         else:
             print(Fore.RED + "Pilihan perangkat tidak valid.")
+            return
 
 if __name__ == "__main__":
     main()
